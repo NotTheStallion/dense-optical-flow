@@ -31,7 +31,6 @@ def compute_optical_flow(frame1, frame2):
     flow = cv.calcOpticalFlowFarneback(gray1, gray2, None, 0.5, 3, 15, 3, 5, 1.2, 0)
     return flow
 
-
 def compute_optical_flow_lk(frame1, frame2):
     gray1 = cv.cvtColor(frame1, cv.COLOR_BGR2GRAY)
     gray2 = cv.cvtColor(frame2, cv.COLOR_BGR2GRAY)
@@ -42,6 +41,20 @@ def compute_optical_flow_lk(frame1, frame2):
         a, b = new.ravel()
         c, d = old.ravel()
         flow[int(d), int(c)] = [a - c, b - d]
+    return flow
+
+def compute_optical_flow_tvl1(frame1, frame2):
+    gray1 = cv.cvtColor(frame1, cv.COLOR_BGR2GRAY)
+    gray2 = cv.cvtColor(frame2, cv.COLOR_BGR2GRAY)
+    tvl1 = cv.optflow.DualTVL1OpticalFlow_create()
+    flow = tvl1.calc(gray1, gray2, None)
+    return flow
+
+def compute_optical_flow_deepflow(frame1, frame2):
+    gray1 = cv.cvtColor(frame1, cv.COLOR_BGR2GRAY)
+    gray2 = cv.cvtColor(frame2, cv.COLOR_BGR2GRAY)
+    deepflow = cv.optflow.createOptFlow_DeepFlow()
+    flow = deepflow.calc(gray1, gray2, None)
     return flow
 
 feature_params = dict(maxCorners=100, qualityLevel=0.3, minDistance=7, blockSize=7)
@@ -86,11 +99,16 @@ def run(directory, method='farneback', display=False):
             flow1 = compute_optical_flow(frame1, frame2)
         elif method == 'lk':
             flow1 = compute_optical_flow_lk(frame1, frame2)
+        elif method == 'tvl1':
+            flow1 = compute_optical_flow_tvl1(frame1, frame2)
+        elif method == 'deepflow':
+            flow1 = compute_optical_flow_deepflow(frame1, frame2)
         e_ae = compute_ae(flow_st, flow1)
         e_epe = compute_epe(flow_st, flow1)
         compensated_frame = project(frame1, flow1)
         e_mse = compute_mse(compensated_frame, frame2)
         flow_st = flow1
+        # print(i, " ",len(frames), " ", (i/len(frames))*100)
         wandb.log({"frame": (i/len(frames))*100, "AE": e_ae, "EPE": e_epe, "MSE": e_mse})
         # print(f"Frame {i} to {i+1} - AE: {e_ae} - EPE: {e_epe}, MSE: {e_mse}")
         # Display the optical flow
