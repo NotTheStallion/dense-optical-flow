@@ -11,7 +11,7 @@ import wandb
 def read_frames(directory):
     frames = []
     for filename in sorted(os.listdir(directory)):
-        if filename.endswith(".jpg"):
+        if filename.endswith((".jpg", ".png")):
             img = cv.imread(os.path.join(directory, filename))
             if img is not None:
                 frames.append(img)
@@ -43,19 +43,6 @@ def compute_optical_flow_lk(frame1, frame2):
         flow[int(d), int(c)] = [a - c, b - d]
     return flow
 
-def compute_optical_flow_tvl1(frame1, frame2):
-    gray1 = cv.cvtColor(frame1, cv.COLOR_BGR2GRAY)
-    gray2 = cv.cvtColor(frame2, cv.COLOR_BGR2GRAY)
-    tvl1 = cv.optflow.DualTVL1OpticalFlow_create()
-    flow = tvl1.calc(gray1, gray2, None)
-    return flow
-
-def compute_optical_flow_deepflow(frame1, frame2):
-    gray1 = cv.cvtColor(frame1, cv.COLOR_BGR2GRAY)
-    gray2 = cv.cvtColor(frame2, cv.COLOR_BGR2GRAY)
-    deepflow = cv.optflow.createOptFlow_DeepFlow()
-    flow = deepflow.calc(gray1, gray2, None)
-    return flow
 
 feature_params = dict(maxCorners=100, qualityLevel=0.3, minDistance=7, blockSize=7)
 lk_params = dict(winSize=(15, 15), maxLevel=2, criteria=(cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.03))
@@ -91,7 +78,11 @@ def run(directory, method='farneback', display=False):
     wandb.define_metric("frame")
     wandb.define_metric("*", step_metric="frame")
 
-    flow_st = compute_optical_flow_lk(frames[0], frames[1])
+    if method == 'farneback':
+        flow_st = compute_optical_flow(frames[0], frames[1])
+    elif method ==  'lk':
+        flow_st = compute_optical_flow_lk(frames[0], frames[1])
+    
     for i in range(len(frames) - 1):
         frame1 = frames[i]
         frame2 = frames[i + 1]
@@ -99,10 +90,7 @@ def run(directory, method='farneback', display=False):
             flow1 = compute_optical_flow(frame1, frame2)
         elif method == 'lk':
             flow1 = compute_optical_flow_lk(frame1, frame2)
-        elif method == 'tvl1':
-            flow1 = compute_optical_flow_tvl1(frame1, frame2)
-        elif method == 'deepflow':
-            flow1 = compute_optical_flow_deepflow(frame1, frame2)
+            
         e_ae = compute_ae(flow_st, flow1)
         e_epe = compute_epe(flow_st, flow1)
         compensated_frame = project(frame1, flow1)
@@ -132,15 +120,15 @@ def run(directory, method='farneback', display=False):
 
 
 if __name__ == '__main__':
-    directory = 'GITW_selection/CanOfCocaCola/CanOfCocaColaPlace3Subject1/Frames'
-    display = False
+    directory = 'MPI-Sintel-complete/test/clean/ambush_3'
+    display = True
     run(directory, method='lk', display=display)
-    run(directory, method='farneback', display=display)
+    # run(directory, method='farneback', display=display)
     
-    directory = 'GITW_selection/Bowl/BowlPlace1Subject2/Frames'
-    run(directory, method='lk', display=display)
-    run(directory, method='farneback', display=display)
+    # directory = 'GITW_selection/Bowl/BowlPlace1Subject2/Frames'
+    # run(directory, method='lk', display=display)
+    # run(directory, method='farneback', display=display)
     
-    directory = 'GITW_selection/Rice/RicePlace6Subject3/Frames'
-    run(directory, method='lk', display=display)
-    run(directory, method='farneback', display=display)
+    # directory = 'GITW_selection/Rice/RicePlace6Subject3/Frames'
+    # run(directory, method='lk', display=display)
+    # run(directory, method='farneback', display=display)
