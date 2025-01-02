@@ -1,20 +1,11 @@
 import cv2 as cv
 import numpy as np
 import os
+from optical_flow import read_frames
 
-
-# Reading frames from directory 
-def read_frames(directory):
-    frames = []
-    for filename in sorted(os.listdir(directory)):
-        if filename.endswith(".jpg"):
-            img = cv.imread(os.path.join(directory, filename))
-            if img is not None:
-                frames.append(img)
-    return frames
 
 # directory = 'GITW_selection/Bowl/BowlPlace1Subject2/Frames'
-directory = 'GITW_selection/CanOfCocaCola/CanOfCocaColaPlace3Subject1/Frames'
+directory = 'MPI-Sintel-complete/training/clean/temple_2'
 frames = read_frames(directory)
 print(f"Read {len(frames)} frames")
 
@@ -68,7 +59,7 @@ for i, frame in enumerate(frames[1:]):
     img = cv.add(frame, mask)
 
     # Create the output directory if it doesn't exist
-    output_directory = os.path.join(directory, '../opt_flow')
+    output_directory = os.path.join(directory, '../../opt_flow')
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
