@@ -25,6 +25,8 @@ def run(directory, compute_optflow=farneback_optical_flow, display=False):
     wandb.define_metric("frame")
     wandb.define_metric("*", step_metric="frame")
 
+    e_ae = 0
+    e_epe = 0
     flow_st = None
     
     for i in range(len(frames) - 1):
@@ -32,13 +34,12 @@ def run(directory, compute_optflow=farneback_optical_flow, display=False):
         frame2 = frames[i + 1]
 
         flow1 = compute_optflow(frame1, frame2, flow_st)
-        # to get flow_directory move back to the parent of the parent directory and then to the flow directory and then to the category directory
+        if gt_flows:
+            gt_flow = gt_flows[i]
+                
+            e_ae = compute_ae(flow1, gt_flow)
+            e_epe = compute_epe(flow1, gt_flow)
         
-        
-        gt_flow = compute_optflow(frame1, frame2, flow_st)
-            
-        e_ae = compute_ae(flow1, gt_flow)
-        e_epe = compute_epe(flow1, gt_flow)
         compensated_frame = project(frame1, flow1)
         e_mse = compute_mse(compensated_frame, frame2)
         flow_st = flow1
@@ -66,7 +67,7 @@ def run(directory, compute_optflow=farneback_optical_flow, display=False):
 
 if __name__ == '__main__':
     directory = 'MPI-Sintel_selection/training/clean/temple_3'
-    display = True
+    display = False
     run(directory, compute_optflow=pcaflow_optical_flow, display=display)
     run(directory, compute_optflow=deepflow_optical_flow, display=display)
     run(directory, compute_optflow=farneback_optical_flow, display=display)
