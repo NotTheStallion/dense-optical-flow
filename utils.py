@@ -58,14 +58,15 @@ def read_frames(directory):
     return frames
 
 
-def read_flows(directory):
-    def read_flow(filename):
+def read_flow(filename):
         flow = cv.readOpticalFlow(filename)
         if flow is None:
             return None
         flow = flow[..., :2]
         return flow
-    
+
+
+def read_flows(directory):
     flows = []
     for filename in sorted(os.listdir(directory)):
         if filename.endswith(".flo"):
@@ -73,6 +74,22 @@ def read_flows(directory):
             if flow is not None:
                 flows.append(flow)
     return flows
+
+
+def write_flow(flow, filename):
+    cv.writeOpticalFlow(filename, flow)
+
+
+def display_flow(flow):
+    hsv = np.zeros_like(flow)
+    hsv[..., 1] = 255
+
+    mag, ang = cv.cartToPolar(flow[..., 0], flow[..., 1])
+    hsv[..., 0] = ang * 180 / np.pi / 2
+    hsv[..., 2] = cv.normalize(mag, None, 0, 255, cv.NORM_MINMAX)
+    bgr = cv.cvtColor(hsv, cv.COLOR_HSV2BGR)
+
+    cv.imshow('Optical Flow', bgr)
 
 
 def compute_ae(flow1, flow2):
