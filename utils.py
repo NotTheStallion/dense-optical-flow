@@ -80,8 +80,9 @@ def write_flow(flow, filename):
     cv.writeOpticalFlow(filename, flow)
 
 
-def display_flow(flow):
-    hsv = np.zeros_like(flow)
+def flow2bgr(flow):
+    h, w = flow.shape[:2]
+    hsv = np.zeros((h, w, 3), dtype=np.uint8)
     hsv[..., 1] = 255
 
     mag, ang = cv.cartToPolar(flow[..., 0], flow[..., 1])
@@ -89,7 +90,8 @@ def display_flow(flow):
     hsv[..., 2] = cv.normalize(mag, None, 0, 255, cv.NORM_MINMAX)
     bgr = cv.cvtColor(hsv, cv.COLOR_HSV2BGR)
 
-    cv.imshow('Optical Flow', bgr)
+    # cv.imshow('Optical Flow', bgr)
+    return bgr
 
 
 def compute_ae(flow1, flow2):
