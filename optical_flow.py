@@ -8,7 +8,7 @@ from utils import *
 # os.environ['WANDB_DISABLED'] = 'true'
 
 
-def run(directory, compute_optflow=farneback_optical_flow, display=False):
+def run(directory, compute_optflow=farneback_optical_flow, display=False, ground_truth=False):
     frames = read_frames(directory)
     print(f"Read {len(frames)} frames {directory}")
     
@@ -34,6 +34,9 @@ def run(directory, compute_optflow=farneback_optical_flow, display=False):
         frame2 = frames[i + 1]
 
         flow1 = compute_optflow(frame1, frame2, flow_st)
+        if ground_truth:
+            flow1 = gt_flows[i]
+        
         if gt_flows:
             gt_flow = gt_flows[i]
                 
@@ -68,6 +71,12 @@ def run(directory, compute_optflow=farneback_optical_flow, display=False):
 if __name__ == '__main__':
     directory = 'MPI-Sintel_selection/training/clean/temple_3'
     display = False
+    
+    def ground_truth_optical_flow(frame1, frame2, flow_st):
+        return None
+    
+    
     run(directory, compute_optflow=pcaflow_optical_flow, display=display)
     run(directory, compute_optflow=deepflow_optical_flow, display=display)
     run(directory, compute_optflow=farneback_optical_flow, display=display)
+    run(directory, compute_optflow=ground_truth_optical_flow, ground_truth=True)
