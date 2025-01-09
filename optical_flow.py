@@ -2,7 +2,8 @@ import cv2 as cv
 import numpy as np
 import os
 import wandb
-from utils import *
+from utils_ import *
+from demo import raft_optflow
 
 
 # os.environ['WANDB_DISABLED'] = 'true'
@@ -10,13 +11,16 @@ from utils import *
 
 def run(directory, compute_optflow=farneback_optical_flow, display=False, ground_truth=False):
     frames = read_frames(directory)
+    frames = frames[:max((len(frames) - 1), 50)]
     print(f"Read {len(frames)} frames {directory}")
     
-    # get the last directory name
     category = directory.split('/')[-1]
     
     flow_directory = os.path.join(os.path.dirname(os.path.dirname(directory)), 'flow', category)
-    gt_flows = read_flows(flow_directory)
+    try :
+        gt_flows = read_flows(flow_directory)
+    except:
+        gt_flows = []
     print(f"Read {len(gt_flows)} flows {flow_directory}")
     
     
@@ -30,16 +34,19 @@ def run(directory, compute_optflow=farneback_optical_flow, display=False, ground
     flow_st = None
     
     for i in range(len(frames) - 1):
-        frame1 = frames[i]
-        frame2 = frames[i + 1]
-
+        frame1 = frames[i][:200]
+        frame2 = frames[i + 1][:200]
+        
         flow1 = compute_optflow(frame1, frame2, flow_st)
+
         if ground_truth:
             flow1 = gt_flows[i]
         
         if gt_flows:
             gt_flow = gt_flows[i]
-                
+            
+            flow1 = flow1[:200]
+
             e_ae = compute_ae(flow1, gt_flow)
             e_epe = compute_epe(flow1, gt_flow)
         
@@ -69,14 +76,33 @@ def run(directory, compute_optflow=farneback_optical_flow, display=False, ground
 
 
 if __name__ == '__main__':
-    directory = 'MPI-Sintel_selection/training/clean/temple_3'
+    import argparse
+    from demo import raft_optflow
+    
+    # directory = 'MPI-Sintel_selection/training/clean/temple_3'
+    directory = "GITW_selection/CanOfCocaCola/CanOfCocaColaPlace3Subject1/Frames"
+
+    parser = argparse.ArgumentParser()
+    args = parser.parse_args(args=[])
+    args.model = "models/raft-sintel.pth"
+    args.path = directory
+    args.small = False
+    args.mixed_precision = False
+    args.alternate_corr = False
+    
+    
+    
     display = False
     
     def ground_truth_optical_flow(frame1, frame2, flow_st):
         return None
     
+    def raft(frame1, frame2, flow_st):
+        return raft_optflow(frame1, frame2, args)
+    
     
     run(directory, compute_optflow=pcaflow_optical_flow, display=display)
     run(directory, compute_optflow=deepflow_optical_flow, display=display)
     run(directory, compute_optflow=farneback_optical_flow, display=display)
+    run(directory, compute_optflow=raft, display=display)
     run(directory, compute_optflow=ground_truth_optical_flow, ground_truth=True)

@@ -9,7 +9,7 @@ def farneback_optical_flow(frame1, frame2, prev_flow=None):
     gray1 = cv.cvtColor(frame1, cv.COLOR_BGR2GRAY)
     gray2 = cv.cvtColor(frame2, cv.COLOR_BGR2GRAY)
     flow = cv.calcOpticalFlowFarneback(
-        gray1, gray2, prev_flow, 0.5, 3, 15, 3, 5, 1.2, 0
+        gray1, gray2, prev_flow, pyr_scale=0.5, levels=5, winsize=50, iterations=3, poly_n=7, poly_sigma=1.5, flags=0
     )
     return flow
 
@@ -107,25 +107,56 @@ def compute_mse(frame1, frame2):
 
 
 def project(frame, flow):
-    h, w = flow.shape[:2]
-    flow_map = np.column_stack((flow[..., 0].flatten(), flow[..., 1].flatten()))
-    remap = np.column_stack((np.repeat(np.arange(w), h), np.tile(np.arange(h), w)))
-    remap = remap + flow_map
-    remap = remap.reshape(h, w, 2).astype(np.float32)
-    return cv.remap(frame, remap, None, cv.INTER_LINEAR)
+    h, w = frame.shape[:2]
+    flow_map = np.zeros_like(frame)
 
+    for y in range(h):
+        for x in range(w):
+            dx, dy = flow[y, x]
+            new_x = int(x + dx)
+            new_y = int(y + dy)
+
+            if 0 <= new_x < w and 0 <= new_y < h:
+                flow_map[new_y, new_x] = frame[y, x]
+
+    return flow_map
 
 
 # Example usage
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    
     frame1 = cv.imread("MPI-Sintel_selection/training/clean/temple_3/frame_0002.png")
     frame2 = cv.imread("MPI-Sintel_selection/training/clean/temple_3/frame_0003.png")
+    frame3 = cv.imread("MPI-Sintel_selection/training/clean/temple_3/frame_0004.png")
     
     flow_farneback = farneback_optical_flow(frame1, frame2)
     flow_pcaflow = pcaflow_optical_flow(frame1, frame2)
     # flow_simpleflow = simpleflow_optical_flow(frame1, frame2)
     flow_deepflow = deepflow_optical_flow(frame1, frame2)
     # flow_dis = dis_optical_flow(frame1, frame2)
+    
+    # display predicted next frame
+    frame2_farneback = project(frame1, flow_deepflow)
+    
+    plt.figure(figsize=(15, 5))
+    
+    plt.subplot(1, 3, 1)
+    plt.title("Frame 1")
+    plt.imshow(cv.cvtColor(frame1, cv.COLOR_BGR2RGB))
+    plt.axis('off')
+    
+    plt.subplot(1, 3, 2)
+    plt.title("Frame 2")
+    plt.imshow(cv.cvtColor(frame2, cv.COLOR_BGR2RGB))
+    plt.axis('off')
+    
+    plt.subplot(1, 3, 3)
+    plt.title("Projected Frame 2 (Farneback)")
+    plt.imshow(cv.cvtColor(frame2_farneback, cv.COLOR_BGR2RGB))
+    plt.axis('off')
+    
+    plt.show()
     
     # numerical difference between flows
     for flow in [flow_farneback, flow_pcaflow, flow_deepflow]:
